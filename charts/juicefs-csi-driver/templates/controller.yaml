@@ -20,10 +20,14 @@ spec:
         app: juicefs-csi-controller
         {{- include "juicefs-csi.selectorLabels" . | nindent 8 }}
     spec:
-    {{- if .Values.hostAliases }}
+      {{- if .Values.hostAliases }}
       hostAliases:
       {{- toYaml .Values.hostAliases | nindent 6 }}
-    {{- end }}
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: juicefs-plugin
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
