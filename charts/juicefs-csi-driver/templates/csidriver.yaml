@@ -2,10 +2,10 @@ apiVersion: {{ ternary "storage.k8s.io/v1" "storage.k8s.io/v1beta1" (semverCompa
 kind: CSIDriver
 metadata:
   name: csi.juicefs.com
+  {{- if .Values.CSIDriver.annotations }}
   annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
-    "helm.sh/hook-delete-policy": before-hook-creation
-    "helm.sh/resource-policy": keep
+    {{- toYaml .Values.CSIDriver.annotations | nindent 4 }}
+  {{- end }}
 spec:
   attachRequired: false
   podInfoOnMount: false
