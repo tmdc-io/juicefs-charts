@@ -25,6 +25,6 @@ ex ```shell 0.14.2-d1, 0.14.2-d2, 0.14.2-d3 ... ``` like that
 
 We can update and push the **major.minor.patch** section of the tag once there in a release with official repo with same major/minor/patch version and also if we merge the changes to our repo.
 
-ex: Lets say 0.14.3 or 0.15.1 version released . Once changes have been merged to our repo we will use tag 0.14.3-d(+1) or 0.15.1(+1).
+ex: Lets say 0.14.3 or 0.15.1 version released . Once changes have been merged to our repo we will use tag 0.14.3-d(+1) or 0.15.1-d(+1).
 
 **Please update the 'version' in Chart.yaml once there is a change in major/minor/patch version**
