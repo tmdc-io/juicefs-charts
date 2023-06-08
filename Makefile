@@ -27,3 +27,7 @@ push-chart:
 # 	@echo
 # 	@echo "=== logout of registry ==="
 # 	helm registry logout $(ECR_HOST)
+
+# Run to Trigger the GitHub Action Pipeline
+git-push:
+	./automate-version-script.sh
