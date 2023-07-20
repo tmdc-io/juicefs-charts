@@ -79,7 +79,7 @@ spec:
           value: {{ .Values.jfsConfigDir }}
         {{- if .Values.defaultMountImage.ce }}
         - name: JUICEFS_CE_MOUNT_IMAGE
-          value: {{ .Values.defaultMountImage.ce.re }}
+          value: "{{ .Values.defaultMountImage.ce.repository }}:{{ .Values.defaultMountImage.ce.tag }}"
         {{- end }}
         {{- if .Values.defaultMountImage.ee }}
         - name: JUICEFS_EE_MOUNT_IMAGE

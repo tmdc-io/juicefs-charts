@@ -149,7 +149,9 @@ node:
 defaultMountImage:
   # -- Default Mount image for community edition, usually set in juicefs-csi-driver image.
   # If set, it will overwrite the value in juicefs-csi-driver image. Refer to [this document](https://juicefs.com/docs/csi/examples/mount-image) for more details.
-  ce: ""
+  ce:
+    repository: juicedata/mount
+    tag: ce-v1.1.0-beta2
   # -- Default Mount image for enterprise edition. usually set in juicefs-csi-driver image.
   # If set, it will overwrite the value in juicefs-csi-driver image. Refer to [this document](https://juicefs.com/docs/csi/examples/mount-image) for more details.
   ee: ""
@@ -235,4 +237,4 @@ storageClasses:
         cpu: 1000m
         memory: 1Gi
     # -- Image of mount pod. Refer to [this document](https://juicefs.com/docs/csi/examples/mount-image) for more details.
-    image: "juicedata/mount:ce-v1.0.4"
+    image: "juicedata/mount:ce-v1.1.0-beta2"

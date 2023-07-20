@@ -1,7 +1,7 @@
 #! /bin/bash
 # set -x
 
-FILE_NAME=release.yaml
+FILE_NAME=release.txt
 VERSION=$(cat $FILE_NAME| grep "VERSION" | awk -F= '{print $2}')
 REMOVED_PREFIX=$(echo "$VERSION" | sed 's/-d[0-9][0-9]*//')
 RELEASE=$(cat $FILE_NAME | grep "RELEASE" | awk -F= '{print $2}')
