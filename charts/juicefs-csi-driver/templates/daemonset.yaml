@@ -18,14 +18,14 @@ spec:
         app: juicefs-csi-node
         {{- include "juicefs-csi.selectorLabels" . | nindent 8 }}
     spec:
-      {{- if .Values.hostAliases }}
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- if .Values.hostAliases }}
       hostAliases:
       {{- toYaml .Values.hostAliases | nindent 6 }}
-      {{- end }}
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+    {{- end }}
       containers:
       - name: juicefs-plugin
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
@@ -50,15 +50,15 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         {{- if ne .Values.mountMode "process" }}
         - name: JUICEFS_MOUNT_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
         - name: HOST_IP
           valueFrom:
             fieldRef:
@@ -69,10 +69,24 @@ spec:
           value: {{ .Values.jfsMountDir }}
         - name: JUICEFS_CONFIG_PATH
           value: {{ .Values.jfsConfigDir }}
-        {{- end }}
         {{- if .Values.node.storageClassShareMount }}
         - name: STORAGE_CLASS_SHARE_MOUNT
           value: "true"
+        {{- end }}
+        {{- if .Values.node.mountPodNonPreempting }}
+        - name: JUICEFS_MOUNT_PRIORITY_NAME
+          value: "juicefs-mount-priority-nonpreempting"
+        - name: JUICEFS_MOUNT_PREEMPTION_POLICY
+          value: "Never"
+        {{- end }}
+        {{- if .Values.defaultMountImage.ce }}
+        - name: JUICEFS_CE_MOUNT_IMAGE
+          value: {{ .Values.defaultMountImage.ce }}
+        {{- end }}
+        {{- if .Values.defaultMountImage.ee }}
+        - name: JUICEFS_EE_MOUNT_IMAGE
+          value: {{ .Values.defaultMountImage.ee }}
+        {{- end }}
         {{- end }}
         livenessProbe:
           failureThreshold: 5
@@ -152,7 +166,7 @@ spec:
       dnsConfig:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      priorityClassName: system-node-critical
+      priorityClassName: {{ .Values.node.priorityClassName }}
       {{- with .Values.node.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

@@ -9,7 +9,7 @@ It will automatically trigger the the github action pipeline with automated vers
 **NOTE:** If you want to update **CHART VERSION** of helm chart, please updated the ```sh VERSION ``` variable manually 
 in release.yaml file (don't touch the suffix(-d..)it will be automatically taken care by script).
 ```sh
-VERSION=0.14.2-d2
+VERSION=0.17.0-d2
 ```
 
 
@@ -22,12 +22,12 @@ First, please check the previous tag and use the incremental version of that.
 Create git tag in local
 
 ```shell
-git tag 0.14.2-d2
+git tag 0.17.0-d2
 ```
 Push the tag to the remote repo
 
 ```shell
-git push origin 0.14.2-d2
+git push origin 0.17.0-d2
 ```
 It will trigger the **TMDC Helm chart push workflow to AWS ECR** github action pipeline.
 **juicefs-csi-driver** helm chart will be created with the **TAG** pushed to github and same will be pushed to AWS ECR
@@ -35,7 +35,7 @@ It will trigger the **TMDC Helm chart push workflow to AWS ECR** github action p
 **NOTE:** Always maintain the semantic version (major.minor.patch) fixed and provide a suffix **-d** with it.
 Tag will be incremental like ```shell major.minor.patch-d(+1 increment)```
 
-ex ```shell 0.14.2-d1, 0.14.2-d2, 0.14.2-d3 ... ``` like that
+ex ```shell 0.17.0-d1, 0.17.0-d2, 0.17.0-d3 ... ``` like that
 
 We can update and push the **major.minor.patch** section of the tag once there in a release with official repo with same major/minor/patch version and also if we merge the changes to our repo.
 
