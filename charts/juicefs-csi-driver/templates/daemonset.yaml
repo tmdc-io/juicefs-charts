@@ -1,13 +1,24 @@
-{{- if and (.Values.node.enabled) (ne .Values.mountMode "sidecar") }}
+{{- if and (.Values.node.enabled) (ne .Values.mountMode "sidecar") (ne .Values.mountMode "serverless") }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
     app.kubernetes.io/component: node
     {{- include "juicefs-csi.labels" . | nindent 4 }}
+    {{- if .Values.node.labels }}
+    {{- toYaml .Values.node.labels | nindent 4}}
+    {{- end}}
+  {{- with .Values.node.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   name: juicefs-csi-node
   namespace: {{ .Release.Namespace | quote }}
 spec:
+  {{- with .Values.node.updateStrategy }}
+  updateStrategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   selector:
     matchLabels:
       app: juicefs-csi-node
@@ -17,6 +28,13 @@ spec:
       labels:
         app: juicefs-csi-node
         {{- include "juicefs-csi.selectorLabels" . | nindent 8 }}
+        {{- if .Values.node.labels }}
+        {{- toYaml .Values.node.labels | nindent 8}}
+        {{- end}}
+      {{- with .Values.node.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -36,12 +54,19 @@ spec:
         - --endpoint=$(CSI_ENDPOINT)
         - --logtostderr
         - --nodeid=$(NODE_NAME)
+        {{- if .Values.node.debug }}
+        - --v=6
+        {{- else }}
         - --v=5
+        {{- end }}
         {{- if eq .Values.mountMode "mountpod" }}
         - --enable-manager=true
         {{- end }}
         {{- if eq .Values.mountMode "process" }}
         - --by-process=true
+        {{- end }}
+        {{- if .Values.globalConfig.enabled }}
+        - --config=/etc/config/config.yaml
         {{- end }}
         env:
         - name: CSI_ENDPOINT
@@ -59,12 +84,14 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        {{- if .Values.node.ifPollingKubelet }}
         - name: HOST_IP
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
         - name: KUBELET_PORT
           value: "10250"
+        {{- end }}
         - name: JUICEFS_MOUNT_PATH
           value: {{ .Values.jfsMountDir }}
         - name: JUICEFS_CONFIG_PATH
@@ -81,26 +108,31 @@ spec:
         {{- end }}
         {{- if .Values.defaultMountImage.ce }}
         - name: JUICEFS_CE_MOUNT_IMAGE
-          value: "{{ .Values.defaultMountImage.ce.repository }}:{{ .Values.defaultMountImage.ce.tag }}"
+          value: {{ .Values.defaultMountImage.ce }}
         {{- end }}
         {{- if .Values.defaultMountImage.ee }}
         - name: JUICEFS_EE_MOUNT_IMAGE
           value: {{ .Values.defaultMountImage.ee }}
         {{- end }}
         {{- end }}
+        {{- if .Values.immutable }}
+        - name: JUICEFS_IMMUTABLE
+          value: "true"
+        {{- end }}
+        {{- if .Values.node.envs }}
+{{ toYaml .Values.node.envs | trim | indent 8 }}
+        {{- end }}
+        {{- with .Values.node.livenessProbe }}
         livenessProbe:
-          failureThreshold: 5
-          httpGet:
-            path: /healthz
-            port: healthz
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 3
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         resources:
           {{- toYaml .Values.node.resources | nindent 10 }}
         ports:
-        - containerPort: 9909
-          name: healthz
+        - containerPort: {{ .Values.node.livenessProbe.httpGet.port }}
+          protocol: TCP
+        - containerPort: 6060
+          name: metrics
           protocol: TCP
         securityContext:
           privileged: true
@@ -120,19 +152,31 @@ spec:
           mountPropagation: Bidirectional
           name: jfs-root-dir
         {{- end }}
-        lifecycle:
-          preStop:
-            exec:
-              command:
-              - /bin/sh
-              - -c
-              - rm /csi/csi.sock
+        {{- if .Values.globalConfig.enabled }}
+        - name: juicefs-config
+          mountPath: /etc/config
+        {{- end }}
       - name: node-driver-registrar
         image: {{ printf "%s:%s" .Values.sidecars.nodeDriverRegistrarImage.repository .Values.sidecars.nodeDriverRegistrarImage.tag }}
+        {{- if .Values.sidecars.nodeDriverRegistrarImage.pullPolicy }}
+        imagePullPolicy: {{ .Values.sidecars.nodeDriverRegistrarImage.pullPolicy }}
+        {{- end }}
         args:
         - --csi-address=$(ADDRESS)
         - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
         - --v=5
+        {{- if gt .Values.sidecars.nodeDriverRegistrarImage.tag "v2.4.0" }}
+        - --health-port=9809
+        ports:
+          - containerPort: 9809
+            name: healthz
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+       {{- end }}
         env:
         - name: ADDRESS
           value: /csi/csi.sock
@@ -145,6 +189,9 @@ spec:
           name: registration-dir
       - name: liveness-probe
         image: {{ printf "%s:%s" .Values.sidecars.livenessProbeImage.repository .Values.sidecars.livenessProbeImage.tag }}
+        {{- if .Values.sidecars.livenessProbeImage.pullPolicy }}
+        imagePullPolicy: {{ .Values.sidecars.livenessProbeImage.pullPolicy }}
+        {{- end }}
         args:
         - --csi-address=$(ADDRESS)
         - --health-port=$(HEALTH_PORT)
@@ -152,7 +199,7 @@ spec:
         - name: ADDRESS
           value: /csi/csi.sock
         - name: HEALTH_PORT
-          value: "9909"
+          value: "{{ .Values.node.livenessProbe.httpGet.port }}"
         volumeMounts:
         - mountPath: /csi
           name: plugin-dir
@@ -206,5 +253,10 @@ spec:
           path: {{ .Values.jfsConfigDir }}
           type: DirectoryOrCreate
         name: jfs-root-dir
+      {{- end }}
+      {{- if .Values.globalConfig.enabled }}
+      - name: juicefs-config
+        configMap:
+          name: {{ include "juicefs-csi.fullname" . }}-config
       {{- end }}
 {{- end }}
