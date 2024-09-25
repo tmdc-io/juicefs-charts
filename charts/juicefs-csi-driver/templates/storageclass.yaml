@@ -95,12 +95,9 @@ parameters:
   {{- if .image }}
   juicefs/mount-image: {{ .image }}
   {{- end }}
-  # {{- if .imagePullPolicy }}
-  # juicefs/mount-imagepullpolicy: {{ .imagePullPolicy }}
-  # {{- end }}
-  # {{- if .imagePullSecret }}
-  # juicefs/mount-imagepullsecret: {{ .imagePullSecret }}
-  # {{- end }}
+  {{- if .annotations }}
+  juicefs/mount-annotations: {{ toJson .annotations | quote }}
+  {{- end }}
   {{- end }}
 provisioner: csi.juicefs.com
 reclaimPolicy: {{ $sc.reclaimPolicy }}
