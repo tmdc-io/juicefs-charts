@@ -37,7 +37,8 @@ sidecars:
 
 imagePullSecrets: []
 
-CSIDriver: {}
+CSIDriver:
+  enabled: true
 
 # The way JuiceFS Client runs. choose between:
 # - mountpod: default, run JuiceFS Client in an independent pod
