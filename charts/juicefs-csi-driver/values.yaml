@@ -9,12 +9,12 @@
 
 image:
   repository: juicedata/juicefs-csi-driver
-  tag: "v0.24.7"
+  tag: "v0.26.0"
   pullPolicy: ""
 
 dashboardImage:
   repository: juicedata/csi-dashboard
-  tag: "v0.24.7"
+  tag: "v0.26.0"
   pullPolicy: ""
 
 sidecars:
@@ -62,15 +62,7 @@ globalConfig:
   # If pvcSelector isn't set, the patch will be applied to all PVCs
   # Variable templates are supported, e.g.  ${MOUNT_POINT}, ${SUB_PATH}, ${VOLUME_ID}
   mountPodPatch:
-    - lifecycle:
-        preStop:
-          exec:
-            command:
-            - sh
-            - -c
-            - +e
-            - umount -l ${MOUNT_POINT}; rmdir ${MOUNT_POINT}; exit 0
-  
+
     # Example configurations:
     # - pvcSelector:
     #     matchLabels:
@@ -275,6 +267,8 @@ dashboard:
   # Basic auth for dashboard
   auth:
     enabled: false
+    # Set existingSecret to indicate whether to use an existing secret. If it is empty, a corresponding secret will be created according to the plain text configuration.
+    existingSecret: ""
     username: admin
     password: admin
 
@@ -363,6 +357,8 @@ storageClasses:
 - name: "juicefs-sc"
   # Set to true to actually create this StorageClass
   enabled: false
+  # Set existingSecret to indicate whether to use an existing secret. If it is empty, a corresponding secret will be created according to the plain text configuration.
+  existingSecret: ""
   # Either Retain or Delete, ref: https://juicefs.com/docs/csi/guide/resource-optimization#reclaim-policy
   reclaimPolicy: Retain
   # Set to true to allow PVC expansion
