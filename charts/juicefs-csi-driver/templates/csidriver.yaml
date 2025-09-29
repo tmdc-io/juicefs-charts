@@ -2,8 +2,7 @@
 apiVersion: {{ ternary "storage.k8s.io/v1" "storage.k8s.io/v1beta1" (semverCompare ">=1.18.0-0" .Capabilities.KubeVersion.Version) }}
 kind: CSIDriver
 metadata:
-  name: csi.juicefs.com
-  {{- if .Values.CSIDriver.annotations }}
+  name: {{ include "driverName" . }}
   annotations:
     {{- toYaml .Values.CSIDriver.annotations | nindent 4 }}
   {{- end }}

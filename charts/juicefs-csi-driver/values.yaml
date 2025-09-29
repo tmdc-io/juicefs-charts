@@ -9,12 +9,12 @@
 
 image:
   repository: juicedata/juicefs-csi-driver
-  tag: "v0.26.0"
+  tag: "v0.30.0"
   pullPolicy: ""
 
 dashboardImage:
   repository: juicedata/csi-dashboard
-  tag: "v0.26.0"
+  tag: "v0.30.0"
   pullPolicy: ""
 
 sidecars:
@@ -48,11 +48,20 @@ CSIDriver:
 # Ref: https://juicefs.com/docs/csi/introduction/
 mountMode: mountpod
 
+# The name of the JuiceFS CSI driver
+driverName: "csi.juicefs.com"
+
 # This file contains the configuration options for the JuiceFS CSI driver
 # Ref: https://juicefs.com/docs/zh/csi/guide/configurations#configmap
 globalConfig:
   # Set to false to disable global config
   enabled: true
+
+  # Set to true to manage global config by Helm
+  # If set to false:
+  #    1. the global config will only be applied in the first installation, and will not be updated or deleted by Helm
+  #    2. if you want to update it, you need to edit the configmap directly, or use csi-dashboard
+  manageByHelm: true
 
   # Set to true to schedule mount pod to node with via nodeSelector, rather than nodeName
   enableNodeSelector: false
@@ -182,6 +191,7 @@ controller:
   terminationGracePeriodSeconds: 30
   labels: {}
   annotations: {}
+  metricsPort: "9567"
   # Affinity for CSI Controller pod
   affinity: {}
   # Node selector for CSI Controller pod
@@ -200,7 +210,7 @@ controller:
   # Example:
   #  - name: ENABLE_APISERVER_LIST_CACHE
   #    value: "true"
-  envs:
+  envs: []
 
 node:
   # CSI Node Service will be deployed in every node
@@ -208,6 +218,11 @@ node:
   # Enable verbose logging
   debug: false
   hostNetwork: false
+  # Set to true to run node-driver-registrar and liveness-probe sidecar in privileged mode (e.g. for SELinux systems)
+  sidecarPrivileged: false
+  # Enable transparent hugepage tuning
+  # Set to true to configure transparent hugepage defrag to 'defer' mode
+  tuneTransparentHugePage: false
   resources:
     limits:
       cpu: 1000m
@@ -217,12 +232,15 @@ node:
       memory: 512Mi
   # When set true, enable application pods using same sc share the same mount pod
   storageClassShareMount: false
+  # When set true, enable application pods using same filesystem share the same mount pod
+  fsShareMount: false
   # When set true, disable mount pods preempt application pods when in resource pressure
   mountPodNonPreempting: false
   # Grace period to allow the CSI Node Service pods to shutdown before it is killed
   terminationGracePeriodSeconds: 30
   labels: {}
   annotations: {}
+  metricsPort: "9567"
   # Affinity for CSI Node Service pods
   affinity: {}
   # Node selector for CSI Node Service pods, ref: https://juicefs.com/docs/csi/guide/resource-optimization#csi-node-node-selector
@@ -250,6 +268,15 @@ node:
     initialDelaySeconds: 10
     periodSeconds: 10
     timeoutSeconds: 3
+  # extraVolumes and extraVolumeMounts can be useful to mount in ca certificates for databases
+  extraVolumes: []
+  #  - name: db-ca
+  #    secret:
+  #      secretName: ca-bundle
+  extraVolumeMounts: []
+  #  - name: db-ca
+  #    mountPath: /db-ca
+  #    readOnly: true
 
 # Expose CSI Driver metrics
 metrics:
@@ -262,8 +289,14 @@ metrics:
     servicePort: 8080
 
 dashboard:
-  # CSI Dashboard helps with CSI Driver observation, disabled by default
+  # CSI Dashboard helps with CSI Driver observation, enabled by default
   enabled: false
+
+  # Enable manager for dashboard
+  # If enabled, the dashboard will watch and cache k8s resources in the dashboard, which is used to achieve better performance and more features.
+  # If disabled, directly obtain resources from the k8s API server when the user accesses the dashboard, which will reduce the pressure on the API server under large-scale clusters.
+  enableManager: true
+
   # Basic auth for dashboard
   auth:
     enabled: false
@@ -317,6 +350,30 @@ dashboard:
     #      - chart-example.local
   priorityClassName: system-node-critical
   envs: []
+
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 25%
+
+  # Configure the pod level securityContext.
+  podSecurityContext: {}
+
+  # Configure SecurityContext for Pod.
+  # Ensure that required linux capability to bind port number below 1024 is assigned (`CAP_NET_BIND_SERVICE`).
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+
+  hostAliases: []
+  # - ip: "127.0.0.1"
+  #   hostnames:
+  #   - "foo.local"
+  #   - "bar.local"
 
 # Override mount image, ref: https://juicefs.com/docs/csi/guide/custom-image/
 defaultMountImage:
